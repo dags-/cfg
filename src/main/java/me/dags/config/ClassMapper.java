@@ -1,8 +1,8 @@
 package me.dags.config;
 
-import me.dags.config.annotation.Comment;
-import me.dags.config.annotation.Compact;
-import me.dags.config.annotation.Order;
+import me.dags.config.style.Comment;
+import me.dags.config.style.Order;
+import me.dags.config.style.Style;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -20,23 +20,23 @@ final class ClassMapper {
 
     }
 
-    static <T> MapperFactory<T> getFactory(Class<T> type) {
+    static <T> Node<T> getFactory(Class<T> type) {
         return createFactory(type);
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> MapperFactory<T> createFactory(Class<T> type) {
+    private static <T> Node<T> createFactory(Class<T> type) {
         if (isPrimitive(type)) {
             return new ValueNode(null, getParser(type));
         }
         return createObjectFactory(type, null);
     }
 
-    private static <T> MapperFactory<T> createObjectFactory(Class<T> c, Field parent) {
+    private static <T> Node<T> createObjectFactory(Class<T> c, Field parent) {
         ObjectNode.Builder<T> builder = ObjectNode.builder(c, parent);
 
-        if (c.isAnnotationPresent(Compact.class)) {
-            builder.compact();
+        if (c.isAnnotationPresent(Style.class)) {
+            builder.style(c.getAnnotation(Style.class));
         }
 
         if (c.isAnnotationPresent(Order.class)) {
@@ -53,7 +53,7 @@ final class ClassMapper {
             int modifiers = field.getModifiers();
             if (isValidModifier(modifiers)) {
                 field.setAccessible(true);
-                builder.field(field.getName(), createFactory(field).toInternal());
+                builder.field(field.getName(), createFactory(field));
                 if (field.isAnnotationPresent(Comment.class)) {
                     Comment comment = field.getAnnotation(Comment.class);
                     builder.comment(field.getName(), comment);
@@ -64,7 +64,7 @@ final class ClassMapper {
         return builder.build();
     }
 
-    private static MapperFactory createFactory(Field field) {
+    private static Node createFactory(Field field) {
         Class<?> type = field.getType();
         if (ClassMapper.isPrimitive(type)) {
             return new ValueNode(field, getParser(type));

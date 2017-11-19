@@ -1,7 +1,10 @@
 package me.dags.config;
 
+import me.dags.config.style.Style;
+
 import java.io.IOException;
 import java.lang.reflect.*;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -32,8 +35,8 @@ class MapNode implements Node {
         Type[] args = ((ParameterizedType) type).getActualTypeArguments();
         Class<?> keyType = (Class<?>) args[0];
         Class<?> valType = (Class<?>) args[1];
-        this.keyTemplate = ClassMapper.getFactory(keyType).toInternal();
-        this.valueTemplate = ClassMapper.getFactory(valType).toInternal();
+        this.keyTemplate = ClassMapper.getFactory(keyType);
+        this.valueTemplate = ClassMapper.getFactory(valType);
 
         Constructor<?> keyCon;
         try {
@@ -55,25 +58,43 @@ class MapNode implements Node {
         this.valueConstructor = valCon;
     }
 
-    @Override
-    public void write(Object owner, Appendable appendable, String parentIndent, String indent) throws IOException, IllegalAccessException {
+    public void write(Appendable appendable, Object owner, Style style, int level, boolean key) throws IOException, IllegalAccessException {
+        boolean root = level == 0;
+        boolean empty = true;
+
+        if (!root) {
+            Render.startObject(appendable);
+        }
+
+        int childLevel = level + 1;
         Map<?, ?> map = (Map) get(owner);
-        if (indent.length() != 0) {
-            appendable.append("{\n");
+        Iterator<? extends Map.Entry<?, ?>> iterator = map.entrySet().iterator();
+
+        if (iterator.hasNext()) {
+            Render.lineEnd(appendable);
         }
 
-        String childIndent = indent + " ";
-        for (Map.Entry<?, ?> field : map.entrySet()) {
-            appendable.append(indent);
-            keyTemplate.write(field.getKey(), appendable, indent, childIndent);
-            appendable.append(": ");
-            valueTemplate.write(field.getValue(), appendable, indent, childIndent);
-            appendable.append('\n');
+        while (iterator.hasNext()) {
+            empty = false;
+            Map.Entry<?, ?> field = iterator.next();
+            Render.indents(appendable, style, level);
+            keyTemplate.write(appendable, field.getKey(), style, childLevel, true);
+            Render.assign(appendable, style);
+            valueTemplate.write(appendable, field.getValue(), style, childLevel, false);
+
+            if (iterator.hasNext()) {
+                Render.lineEnd(appendable);
+            }
         }
 
-        if (indent.length() != 0) {
-            appendable.append(parentIndent);
-            appendable.append('}');
+        if (!root) {
+            if (empty) {
+                appendable.append(Render.END_OBJECT);
+            } else {
+                appendable.append(Render.NEWLINE);
+                Render.indents(appendable, style, level - 1);
+                appendable.append(Render.END_OBJECT);
+            }
         }
     }
 
@@ -131,5 +152,41 @@ class MapNode implements Node {
     Map<? ,?> getMap(Object owner) throws IllegalAccessException, InstantiationException {
         Object value = field == null ? newInstance() : get(owner);
         return (Map) value;
+    }
+
+    static Object getSafeKey(Object value) {
+        if (value instanceof String) {
+            String text = (String) value;
+            char box = (char) -1;
+
+            for (int i = 0; i < text.length(); i++) {
+                char c = text.charAt(i);
+                if (c == Render.NEWLINE) {
+                    box = Render.ESCAPE;
+                    break;
+                }
+                if (c == Render.ASSIGN) {
+                    box = Render.QUOTE;
+                }
+            }
+
+            if (box != (char) -1) {
+                return box + text + box;
+            }
+        }
+        return value;
+    }
+
+    static Object getSafeValue(Object value) {
+        if (value instanceof String) {
+            String text = (String) value;
+            for (int i = 0; i < text.length(); i++) {
+                char c = text.charAt(i);
+                if (c == Render.NEWLINE) {
+                    return Render.ESCAPE + text + Render.ESCAPE;
+                }
+            }
+        }
+        return value;
     }
 }

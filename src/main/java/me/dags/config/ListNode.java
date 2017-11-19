@@ -1,8 +1,11 @@
 package me.dags.config;
 
+import me.dags.config.style.Style;
+
 import java.io.IOException;
 import java.lang.reflect.*;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -26,7 +29,7 @@ class ListNode implements Node {
             Type[] args = ((ParameterizedType) type).getActualTypeArguments();
             Class<?> childType = (Class<?>) args[0];
             this.field = field;
-            this.valueTemplate = ClassMapper.getFactory(childType).toInternal();
+            this.valueTemplate = ClassMapper.getFactory(childType);
             Constructor<?> constructor;
             try {
                 constructor = childType.getConstructor();
@@ -38,22 +41,43 @@ class ListNode implements Node {
     }
 
     @Override
-    public void write(Object owner, Appendable appendable, String parentIndent, String indent) throws IOException, IllegalAccessException {
-        if (indent.length() != 0) {
-            appendable.append("[\n");
+    public void write(Appendable appendable, Object owner, Style style, int level, boolean key) throws IOException, IllegalAccessException {
+        boolean root = level == 0;
+        boolean empty = true;
+
+        if (!root) {
+            Render.startList(appendable);
         }
 
-        String childIndent = indent + " ";
+        int childLevel = level + 1;
         List<?> list = (List<?>) get(owner);
-        for (Object o : list) {
-            appendable.append(indent);
-            valueTemplate.write(o, appendable, indent, childIndent);
-            appendable.append('\n');
+        Iterator<?> iterator = list.iterator();
+
+        while (iterator.hasNext()) {
+            if (empty) {
+                if (!root) {
+                    Render.lineEnd(appendable);
+                }
+            }
+
+            empty = false;
+            Object next = iterator.next();
+            Render.indents(appendable, style, level);
+            valueTemplate.write(appendable, next, style, childLevel, false);
+
+            if (iterator.hasNext()) {
+                Render.lineEnd(appendable);
+            }
         }
 
-        if (indent.length() != 0) {
-            appendable.append(parentIndent);
-            appendable.append(']');
+        if (!root) {
+            if (empty) {
+                Render.endList(appendable);
+            } else {
+                Render.lineEnd(appendable);
+                Render.indents(appendable, style, level - 1);
+                Render.endList(appendable);
+            }
         }
     }
 

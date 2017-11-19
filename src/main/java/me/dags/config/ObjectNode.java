@@ -1,7 +1,8 @@
 package me.dags.config;
 
-import me.dags.config.annotation.Comment;
-import me.dags.config.annotation.Order;
+import me.dags.config.style.Comment;
+import me.dags.config.style.Order;
+import me.dags.config.style.Style;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -19,7 +20,7 @@ class ObjectNode<T> implements Node<T> {
     private final List<String> order;
     private final Class<T> type;
     private final Field field;
-    private final boolean compact;
+    private final Style style;
 
     private ObjectNode() {
         comments = Collections.emptyMap();
@@ -27,7 +28,7 @@ class ObjectNode<T> implements Node<T> {
         order = Collections.emptyList();
         type = null;
         field = null;
-        compact = false;
+        style = Style.DEFAULT;
     }
 
     private ObjectNode(Builder<T> builder) {
@@ -36,47 +37,64 @@ class ObjectNode<T> implements Node<T> {
         order = Collections.unmodifiableList(new LinkedList<>(builder.order));
         type = builder.type;
         field = builder.field;
-        compact = builder.compact;
+        style = builder.style;
     }
 
     @Override
-    public void write(Object owner, Appendable appendable, String parentIndent, String indent) throws IOException, IllegalAccessException {
-        if (indent.length() != 0) {
-            appendable.append("{\n");
+    public void write(Appendable appendable, Object owner, Style style, int level, boolean key) throws IOException, IllegalAccessException {
+        boolean root = level == 0;
+        boolean empty;
+
+        if (root || this.style.override()) {
+            style = this.style;
         }
 
-        writeComment(appendable, "#header", indent);
+        if (!root) {
+            Render.startObject(appendable);
+        }
 
-        String childIndent = indent + " ";
+        empty = !Render.header(appendable, comments.get("#header"), style, level, root);
+
+        int childLevel = level + 1;
         Object instance = field != null ? get(owner) : owner;
-
         Collection<String> keys = order.isEmpty() ? fields.keySet() : order;
         Iterator<String> iterator = keys.iterator();
+
         while (iterator.hasNext()) {
-            String key = iterator.next();
-            Node value = fields.get(key);
-            if (value == null || value.isEmpty(instance)) {
+            String next = iterator.next();
+            Node value = fields.get(next);
+
+            if (value == null || style.ignoreEmpty() && value.isEmpty(instance)) {
                 continue;
             }
 
-            writeComment(appendable, key, indent);
-            appendable.append(indent);
-            appendable.append(key);
-            appendable.append(": ");
-            value.write(instance, appendable, indent, childIndent);
+            if (empty) {
+                if (!root) {
+                    Render.lineEnd(appendable);
+                }
+            } else {
+                Render.lineBreaks(appendable, style);
+            }
+
+            empty = false;
+            Render.comment(appendable, comments.get(next), style, level);
+            Render.indents(appendable, style, level);
+            Render.key(appendable, MapNode.getSafeKey(next), style);
+            value.write(appendable, instance, style, childLevel, false);
 
             if (iterator.hasNext()) {
-                appendable.append('\n');
-                if (!compact) {
-                    appendable.append('\n');
-                }
+                Render.lineEnd(appendable);
             }
         }
 
-        if (indent.length() != 0) {
-            appendable.append('\n');
-            appendable.append(parentIndent);
-            appendable.append('}');
+        if (!root) {
+            if (empty) {
+                Render.endObject(appendable);
+            } else {
+                Render.lineEnd(appendable);
+                Render.indents(appendable, style, level - 1);
+                Render.endObject(appendable);
+            }
         }
     }
 
@@ -119,25 +137,6 @@ class ObjectNode<T> implements Node<T> {
         return fields.getOrDefault(name, ValueNode.EMPTY);
     }
 
-    private void writeComment(Appendable appendable, String name, String indent) throws IOException {
-        if (compact) {
-            return;
-        }
-
-        Comment comment = comments.get(name);
-        if (comment != null) {
-            for (String line : comment.value()) {
-                appendable.append(indent);
-                appendable.append("# ");
-                appendable.append(line);
-                appendable.append('\n');
-            }
-            if (name.equals("#header")) {
-                appendable.append('\n');
-            }
-        }
-    }
-
     static <T> Builder<T> builder(Class<T> type, Field field) {
         return new Builder<>(type, field);
     }
@@ -149,7 +148,7 @@ class ObjectNode<T> implements Node<T> {
         private final Set<String> order = new LinkedHashSet<>();
         private final Class<T> type;
         private final Field field;
-        private boolean compact = false;
+        private Style style = Style.DEFAULT;
 
         private Builder(Class<T> type, Field field) {
             this.type = type;
@@ -164,8 +163,8 @@ class ObjectNode<T> implements Node<T> {
             return this;
         }
 
-        Builder compact() {
-            this.compact = true;
+        Builder style(Style style) {
+            this.style = style;
             return this;
         }
 

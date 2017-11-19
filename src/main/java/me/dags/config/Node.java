@@ -1,11 +1,13 @@
 package me.dags.config;
 
+import me.dags.config.style.Style;
+
 import java.io.IOException;
 
 /**
  * @author dags <dags@dags.me>
  */
-interface Node<T> extends MapperFactory<T> {
+public interface Node<T> extends Mapper<T> {
 
     T newInstance() throws IllegalAccessException, InstantiationException;
 
@@ -13,7 +15,7 @@ interface Node<T> extends MapperFactory<T> {
 
     void set(Object owner, Object value) throws IllegalAccessException;
 
-    void write(Object owner, Appendable appendable, String parentIndent, String indent) throws IOException, IllegalAccessException;
+    void write(Appendable appendable, Object owner, Style style, int level, boolean key) throws IOException, IllegalAccessException;
 
     default ObjectNode asObject() {
         return ObjectNode.EMPTY;

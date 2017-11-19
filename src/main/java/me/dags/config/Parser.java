@@ -2,9 +2,7 @@ package me.dags.config;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import java.io.Reader;
 import java.util.List;
 import java.util.Map;
 
@@ -13,28 +11,18 @@ import java.util.Map;
  */
 class Parser implements Closeable {
 
-    private static final int START_OBJECT = '{';
-    private static final int END_OBJECT = '}';
-    private static final int START_LIST = '[';
-    private static final int END_LIST = ']';
-    private static final int NEWLINE = '\n';
-    private static final int COMMENT = '#';
-    private static final int ASSIGN = ':';
-    private static final int LINE_SEPARATOR = System.lineSeparator().charAt(0);
-
-    private final InputStream source;
-    private final InputStreamReader reader;
-    private final char[] buffer = new char[128];
+    private final Reader reader;
+    private final char[] buffer = new char[4096];
 
     private char c = (char) -1;
     private boolean drained = true;
 
-    Parser(InputStream source) {
-        this.source = source;
-        this.reader = new InputStreamReader(source, StandardCharsets.UTF_8);
+    Parser(Reader reader) {
+        this.reader = reader;
     }
 
-    <T> T unmarshal(T owner, Node element) throws Exception {
+    @SuppressWarnings("unchecked")
+    <T> T unMarshal(T owner, Node element) throws Exception {
         return (T) parse(owner, element, false);
     }
 
@@ -54,9 +42,9 @@ class Parser implements Closeable {
     }
 
     private Object populateObject(Object objectOwner, ObjectNode object) throws Exception {
-        // skip header comments, padding & object start char
+        // skip header comments, pad & object start char
         skipComments();
-        if (peek() == START_OBJECT) {
+        if (peek() == Render.START_OBJECT) {
             consume();
         }
 
@@ -64,7 +52,7 @@ class Parser implements Closeable {
             skipSpace();
 
             // check if end of object
-            if (peek() == END_OBJECT) {
+            if (peek() == Render.END_OBJECT) {
                 consume();
                 break;
             }
@@ -91,13 +79,15 @@ class Parser implements Closeable {
 
     @SuppressWarnings("unchecked")
     private Map populateMap(Object mapOwner, MapNode map) throws Exception {
-        // skip padding & map start char
+        // skip pad & map start char
         skipSpace();
-        if (peek() == START_OBJECT) {
+        if (peek() == Render.START_OBJECT) {
             consume();
         }
 
         Map instance = map.getMap(mapOwner);
+        instance.clear();
+
         Node keyElement = map.getKeyTemplate();
         Node valueElement = map.getValueTemplate();
 
@@ -105,14 +95,14 @@ class Parser implements Closeable {
             skipSpace();
 
             // check if end of map
-            if (peek() == END_OBJECT) {
+            if (peek() == Render.END_OBJECT) {
                 consume();
                 break;
             }
 
             // parse key, skip assign char ':'
             Object key = parse(map.newKeyInstance(), keyElement, true);
-            if (peek() == ASSIGN) {
+            if (peek() == Render.ASSIGN) {
                 consume();
             }
 
@@ -126,19 +116,21 @@ class Parser implements Closeable {
 
     @SuppressWarnings("unchecked")
     private List populateList(Object owner, ListNode list) throws Exception {
-        // skip padding and start list char
+        // skip pad and start list char
         skipSpace();
-        if (peek() == START_LIST) {
+        if (peek() == Render.START_LIST) {
             consume();
         }
 
         List instance = list.getList(owner);
+        instance.clear();
+
         Node node = list.getValueTemplate();
         while (next()) {
             skipSpace();
 
             // check if end of array
-            if (peek() == END_LIST) {
+            if (peek() == Render.END_LIST) {
                 consume();
                 break;
             }
@@ -187,7 +179,7 @@ class Parser implements Closeable {
 
     private void skipComments() throws IOException {
         skipSpace();
-        while (peek() == COMMENT) {
+        while (peek() == Render.COMMENT) {
             while (next()) {
                 char c = consume();
                 if (isLineBreak(c)) {
@@ -199,10 +191,30 @@ class Parser implements Closeable {
     }
 
     private String nextString(boolean key) throws IOException {
+        char peek = peek();
+        if (peek == Render.ESCAPE || peek == Render.QUOTE) {
+            consume();
+            return nextQuotedString(peek);
+        }
+        return nextRawString(key);
+    }
+
+    private String nextRawString(boolean key) throws IOException {
         int pos = 0;
         while (next()) {
             char c = consume();
-            if ((key && c == ASSIGN) || isLineBreak(c)) {
+            if ((key && c == Render.ASSIGN) || isLineBreak(c)) {
+                break;
+            }
+            buffer[pos++] = c;
+        }
+        return new String(buffer, 0, pos);
+    }
+
+    private String nextQuotedString(char end) throws IOException {
+        int pos = 0;
+        while (next()) {
+            if (consume() == end) {
                 break;
             }
             buffer[pos++] = c;
@@ -211,12 +223,11 @@ class Parser implements Closeable {
     }
 
     private boolean isLineBreak(char c) {
-        return c == NEWLINE || c == LINE_SEPARATOR;
+        return c == Render.NEWLINE || c == Render.LINE_SEPARATOR;
     }
 
     @Override
     public void close() throws IOException {
-        source.close();
         reader.close();
     }
 }

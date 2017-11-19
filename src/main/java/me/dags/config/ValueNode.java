@@ -1,5 +1,7 @@
 package me.dags.config;
 
+import me.dags.config.style.Style;
+
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.function.Function;
@@ -25,12 +27,10 @@ class ValueNode implements Node {
     }
 
     @Override
-    public void write(Object owner, Appendable appendable, String parentIndent, String indent) throws IOException, IllegalAccessException {
-        if (field == null) {
-            appendable.append(owner.toString());
-        } else {
-            appendable.append(get(owner).toString());
-        }
+    public void write(Appendable appendable, Object owner, Style style, int level, boolean key) throws IOException, IllegalAccessException {
+        Object value = field == null ? owner : get(owner);
+        Object safe = key ? MapNode.getSafeKey(value) : MapNode.getSafeValue(value);
+        appendable.append(safe.toString());
     }
 
     @Override
@@ -41,6 +41,11 @@ class ValueNode implements Node {
     @Override
     public boolean isPresent() {
         return this != EMPTY;
+    }
+
+    @Override
+    public boolean isEmpty(Object owner) throws IllegalAccessException {
+        return owner == null || (field != null && get(owner) == null);
     }
 
     @Override
