@@ -1,5 +1,6 @@
 .class
 .iml
+.xml
 
 build/
 .idea/

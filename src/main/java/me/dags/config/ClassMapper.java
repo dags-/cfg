@@ -1,6 +1,7 @@
 package me.dags.config;
 
 import me.dags.config.style.Comment;
+import me.dags.config.style.Default;
 import me.dags.config.style.Order;
 import me.dags.config.style.Style;
 
@@ -27,7 +28,7 @@ final class ClassMapper {
     @SuppressWarnings("unchecked")
     private static <T> Node<T> createFactory(Class<T> type) {
         if (isPrimitive(type)) {
-            return new ValueNode(null, getParser(type));
+            return new ValueNode(null, getParser(type), null);
         }
         return createObjectFactory(type, null);
     }
@@ -67,7 +68,11 @@ final class ClassMapper {
     private static Node createFactory(Field field) {
         Class<?> type = field.getType();
         if (ClassMapper.isPrimitive(type)) {
-            return new ValueNode(field, getParser(type));
+            String def = null;
+            if (field.isAnnotationPresent(Default.class)) {
+                def = field.getAnnotation(Default.class).value();
+            }
+            return new ValueNode(field, getParser(type), def);
         }
 
         if (Map.class.isAssignableFrom(type)) {

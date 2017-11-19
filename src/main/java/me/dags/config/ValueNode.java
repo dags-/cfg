@@ -14,16 +14,24 @@ class ValueNode implements Node {
     static final ValueNode EMPTY = new ValueNode();
 
     private final Field field;
+    private final Object defaultValue;
     private final Function<String, ?> parser;
 
     private ValueNode() {
         this.field = null;
         this.parser = null;
+        this.defaultValue = null;
     }
 
-    ValueNode(Field field, Function<String, ?> parser) {
+    ValueNode(Field field, Function<String, ?> parser, String defaultValue) {
+        Object def = null;
+        if (parser != null && defaultValue != null) {
+            def = parser.apply(defaultValue);
+        }
+
         this.field = field;
         this.parser = parser;
+        this.defaultValue = def;
     }
 
     @Override
@@ -45,7 +53,13 @@ class ValueNode implements Node {
 
     @Override
     public boolean isEmpty(Object owner) throws IllegalAccessException {
-        return owner == null || (field != null && get(owner) == null);
+        if (owner != null && field != null) {
+            Object value = get(owner);
+            if (value != null) {
+                return defaultValue != null && value.equals(defaultValue);
+            }
+        }
+        return true;
     }
 
     @Override
