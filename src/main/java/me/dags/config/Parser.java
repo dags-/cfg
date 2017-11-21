@@ -34,7 +34,7 @@ class Parser implements Closeable {
         } else if (element.isList()) {
             return populateList(owner, element.asList());
         } else {
-            skipSpace();
+            skipSpace(false);
             String input = nextString(key);
             ValueNode node = element.asValue();
             return node.parse(input);
@@ -49,7 +49,7 @@ class Parser implements Closeable {
         }
 
         while (next()) {
-            skipSpace();
+            skipSpace(true);
 
             // check if end of object
             if (peek() == Render.END_OBJECT) {
@@ -80,7 +80,7 @@ class Parser implements Closeable {
     @SuppressWarnings("unchecked")
     private Map populateMap(Object mapOwner, MapNode map) throws Exception {
         // skip pad & map start char
-        skipSpace();
+        skipSpace(false);
         if (peek() == Render.START_OBJECT) {
             consume();
         }
@@ -92,7 +92,7 @@ class Parser implements Closeable {
         Node valueElement = map.getValueTemplate();
 
         while (next()) {
-            skipSpace();
+            skipSpace(true);
 
             // check if end of map
             if (peek() == Render.END_OBJECT) {
@@ -117,7 +117,7 @@ class Parser implements Closeable {
     @SuppressWarnings("unchecked")
     private List populateList(Object owner, ListNode list) throws Exception {
         // skip pad and start list char
-        skipSpace();
+        skipSpace(false);
         if (peek() == Render.START_LIST) {
             consume();
         }
@@ -127,7 +127,7 @@ class Parser implements Closeable {
 
         Node node = list.getValueTemplate();
         while (next()) {
-            skipSpace();
+            skipSpace(true);
 
             // check if end of array
             if (peek() == Render.END_LIST) {
@@ -168,9 +168,14 @@ class Parser implements Closeable {
         return c;
     }
 
-    private void skipSpace() throws IOException {
+    private void skipSpace(boolean lineBreaks) throws IOException {
         while (next()) {
-            if (!Character.isWhitespace(consume())) {
+            char c = consume();
+            if (!lineBreaks && isLineBreak(c)) {
+                drained = false;
+                return;
+            }
+            if (!Character.isWhitespace(c)) {
                 drained = false;
                 return;
             }
@@ -178,7 +183,7 @@ class Parser implements Closeable {
     }
 
     private void skipComments() throws IOException {
-        skipSpace();
+        skipSpace(true);
         while (peek() == Render.COMMENT) {
             while (next()) {
                 char c = consume();
