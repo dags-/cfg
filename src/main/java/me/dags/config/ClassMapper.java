@@ -91,10 +91,13 @@ final class ClassMapper {
     }
 
     private static boolean isPrimitive(Class<?> type) {
-        return PRIMITIVES.containsKey(type);
+        return type.isPrimitive() || type.isEnum() || PRIMITIVES.containsKey(type);
     }
 
     private static Function<String, ?> getParser(Class<?> type) {
+        if (type.isEnum()) {
+            return enumParser(type);
+        }
         return PRIMITIVES.get(type);
     }
 
@@ -117,4 +120,16 @@ final class ClassMapper {
         put(Short.class, Short::parseShort);
         put(String.class, s -> s);
     }};
+
+    private static Function<String, ?> enumParser(Class<?> type) {
+        final Object[] values = type.getEnumConstants();
+        return s -> {
+            for (Object o : values) {
+                if (o.toString().equalsIgnoreCase(s)) {
+                    return o;
+                }
+            }
+            return null;
+        };
+    }
 }

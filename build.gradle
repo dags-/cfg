@@ -3,8 +3,4 @@ plugins {
 }
 
 group 'me.dags'
-version '0.3-SNAPSHOT'
-
-task wrapper(type: Wrapper) {
-    gradleVersion = '3.3'
-}
+version '0.4-SNAPSHOT'
