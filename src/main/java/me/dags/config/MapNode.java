@@ -3,7 +3,10 @@ package me.dags.config;
 import me.dags.config.style.Style;
 
 import java.io.IOException;
-import java.lang.reflect.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Type;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -31,8 +34,7 @@ class MapNode implements Node {
 
     MapNode(Field field) {
         this.field = field;
-        Type type = field.getGenericType();
-        Type[] args = ((ParameterizedType) type).getActualTypeArguments();
+        Type[] args = ParamUtils.getParamTypes(field);
         Class<?> keyType = (Class<?>) args[0];
         Class<?> valType = (Class<?>) args[1];
         this.keyTemplate = ClassMapper.getFactory(keyType);

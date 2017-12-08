@@ -3,7 +3,10 @@ package me.dags.config;
 import me.dags.config.style.Style;
 
 import java.io.IOException;
-import java.lang.reflect.*;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -25,8 +28,7 @@ class ListNode implements Node {
             this.valueTemplate = null;
             this.valueConstructor = null;
         } else {
-            Type type = field.getGenericType();
-            Type[] args = ((ParameterizedType) type).getActualTypeArguments();
+            Type[] args = ParamUtils.getParamTypes(field);
             Class<?> childType = (Class<?>) args[0];
             this.field = field;
             this.valueTemplate = ClassMapper.getFactory(childType);

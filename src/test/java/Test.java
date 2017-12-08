@@ -1,6 +1,7 @@
 import me.dags.config.Mapper;
 
 import java.io.File;
+import java.util.HashMap;
 
 /**
  * @author dags <dags@dags.me>
@@ -8,13 +9,27 @@ import java.io.File;
 public class Test {
 
     public static void main(String[] args) throws Exception {
-        Mapper<Obj> mapper = Mapper.of(Obj.class);
+        Mapper<Child> mapper = Mapper.of(Child.class);
+        Child child = mapper.must(new File("child0.conf"), () -> {
+            Child c = new Child();
+            c.put("one", 2);
+            c.put("adsa", 3);
+            c.put("gaga", 5);
+            return c;
+        });
+        System.out.println(child);
+    }
 
-        // reads test0.conf or creates & writes a new Obj
-        Obj obj = mapper.must(new File("test0.conf"), Obj::getDef);
-        System.out.println(obj);
+    public static class GrandParent<Q> extends HashMap<Q, Integer> {
 
-        obj.name = ""; // Field is omitted on next write due to @Default("")
-        mapper.write(obj, new File("test1.conf"));
+    }
+
+    public static class Parent<Q, K, V> extends GrandParent<K> {
+
+    }
+
+    public static class Child extends Parent<Integer, String, Float> {
+
+        private Child instance = this;
     }
 }
