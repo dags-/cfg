@@ -20,24 +20,27 @@ class ListNode implements Node {
 
     private final Field field;
     private final Node valueTemplate;
+    private final Constructor<?> constructor;
     private final Constructor<?> valueConstructor;
 
     ListNode(Field field) {
         if (field == null) {
             this.field = null;
+            this.constructor = null;
             this.valueTemplate = null;
             this.valueConstructor = null;
         } else {
-            Type[] args = ParamUtils.getParamTypes(field);
+            Type[] args = ClassUtils.getParamTypes(field);
             Class<?> childType = (Class<?>) args[0];
             this.field = field;
-            this.valueTemplate = ClassMapper.getFactory(childType);
+            this.valueTemplate = ClassMapper.getNode(childType);
             Constructor<?> constructor;
             try {
                 constructor = childType.getConstructor();
             } catch (NoSuchMethodException e) {
                 constructor = null;
             }
+            this.constructor = ClassUtils.getConstructor(field, ArrayList.class);
             this.valueConstructor = constructor;
         }
     }
@@ -84,8 +87,8 @@ class ListNode implements Node {
     }
 
     @Override
-    public Object newInstance() throws IllegalAccessException, InstantiationException {
-        return new ArrayList<>();
+    public Object newInstance() throws IllegalAccessException, InvocationTargetException, InstantiationException {
+        return constructor.newInstance();
     }
 
     @Override

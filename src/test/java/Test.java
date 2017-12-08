@@ -10,14 +10,16 @@ public class Test {
 
     public static void main(String[] args) throws Exception {
         Mapper<Child> mapper = Mapper.of(Child.class);
-        Child child = mapper.must(new File("child0.conf"), () -> {
+
+        Child child = mapper.must(new File("child.conf"), () -> {
             Child c = new Child();
             c.put("one", 2);
             c.put("adsa", 3);
             c.put("gaga", 5);
             return c;
         });
-        System.out.println(child);
+
+        System.out.println("IN: " + child);
     }
 
     public static class GrandParent<Q> extends HashMap<Q, Integer> {
@@ -30,6 +32,6 @@ public class Test {
 
     public static class Child extends Parent<Integer, String, Float> {
 
-        private Child instance = this;
+        private final Child $self = this;
     }
 }

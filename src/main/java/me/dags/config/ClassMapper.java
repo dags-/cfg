@@ -15,25 +15,36 @@ import java.util.function.Function;
 /**
  * @author dags <dags@dags.me>
  */
-final class ClassMapper {
+class ClassMapper {
 
     private ClassMapper() {
 
     }
 
-    static <T> Node<T> getFactory(Class<T> type) {
-        return createFactory(type);
+    static <T> Node<T> getNode(Class<T> type) {
+        return createNode(type);
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> Node<T> createFactory(Class<T> type) {
+    private static <T> Node<T> createNode(Class<T> type) {
         if (isPrimitive(type)) {
             return new ValueNode(null, getParser(type), null);
         }
-        return createObjectFactory(type, null);
+
+        try {
+            Field self = type.getDeclaredField("$self");
+            if (self != null && self.getType() == type) {
+                self.setAccessible(true);
+                return createFieldNode(self);
+            }
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        }
+
+        return createObjectNode(type, null);
     }
 
-    private static <T> Node<T> createObjectFactory(Class<T> c, Field parent) {
+    private static <T> Node<T> createObjectNode(Class<T> c, Field parent) {
         ObjectNode.Builder<T> builder = ObjectNode.builder(c, parent);
 
         if (c.isAnnotationPresent(Style.class)) {
@@ -52,9 +63,9 @@ final class ClassMapper {
 
         for (Field field : c.getDeclaredFields()) {
             int modifiers = field.getModifiers();
-            if (isValidModifier(modifiers)) {
+            if (isValidModifier(modifiers) && !field.getName().equals("$self")) {
                 field.setAccessible(true);
-                builder.field(field.getName(), createFactory(field));
+                builder.field(field.getName(), createFieldNode(field));
                 if (field.isAnnotationPresent(Comment.class)) {
                     Comment comment = field.getAnnotation(Comment.class);
                     builder.comment(field.getName(), comment);
@@ -65,7 +76,7 @@ final class ClassMapper {
         return builder.build();
     }
 
-    private static Node createFactory(Field field) {
+    private static Node createFieldNode(Field field) {
         Class<?> type = field.getType();
         if (ClassMapper.isPrimitive(type)) {
             String def = null;
@@ -83,7 +94,7 @@ final class ClassMapper {
             return new ListNode(field);
         }
 
-        return createObjectFactory(field.getType(), field);
+        return createObjectNode(field.getType(), field);
     }
 
     private static boolean isValidModifier(int modifier) {

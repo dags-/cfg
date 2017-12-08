@@ -9,6 +9,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Map;
 
 /**
@@ -21,6 +22,7 @@ class MapNode implements Node {
     private final Field field;
     private final Node keyTemplate;
     private final Node valueTemplate;
+    private final Constructor<?> constructor;
     private final Constructor<?> keyConstructor;
     private final Constructor<?> valueConstructor;
 
@@ -28,17 +30,19 @@ class MapNode implements Node {
         this.field = null;
         this.keyTemplate = null;
         this.valueTemplate = null;
+        this.constructor = null;
         this.keyConstructor = null;
         this.valueConstructor = null;
     }
 
     MapNode(Field field) {
-        this.field = field;
-        Type[] args = ParamUtils.getParamTypes(field);
+        Type[] args = ClassUtils.getParamTypes(field);
         Class<?> keyType = (Class<?>) args[0];
         Class<?> valType = (Class<?>) args[1];
-        this.keyTemplate = ClassMapper.getFactory(keyType);
-        this.valueTemplate = ClassMapper.getFactory(valType);
+
+        this.field = field;
+        this.keyTemplate = ClassMapper.getNode(keyType);
+        this.valueTemplate = ClassMapper.getNode(valType);
 
         Constructor<?> keyCon;
         try {
@@ -56,10 +60,12 @@ class MapNode implements Node {
             valCon = null;
         }
 
+        this.constructor = ClassUtils.getConstructor(field, LinkedHashMap.class);
         this.keyConstructor = keyCon;
         this.valueConstructor = valCon;
     }
 
+    @Override
     public void write(Appendable appendable, Object owner, Style style, int level, boolean key) throws IOException, IllegalAccessException {
         boolean root = level == 0;
         boolean empty = true;
@@ -72,7 +78,7 @@ class MapNode implements Node {
         Map<?, ?> map = (Map) get(owner);
         Iterator<? extends Map.Entry<?, ?>> iterator = map.entrySet().iterator();
 
-        if (iterator.hasNext()) {
+        if (!root && iterator.hasNext()) {
             Render.lineEnd(appendable);
         }
 
@@ -101,8 +107,8 @@ class MapNode implements Node {
     }
 
     @Override
-    public Object newInstance() throws IllegalAccessException, InstantiationException {
-        return new LinkedHashMap<>();
+    public Object newInstance() throws IllegalAccessException, InstantiationException, InvocationTargetException {
+        return constructor.newInstance();
     }
 
     @Override
@@ -151,7 +157,7 @@ class MapNode implements Node {
         return valueTemplate;
     }
 
-    Map<? ,?> getMap(Object owner) throws IllegalAccessException, InstantiationException {
+    Map<? ,?> getMap(Object owner) throws IllegalAccessException, InstantiationException, InvocationTargetException {
         Object value = field == null ? newInstance() : get(owner);
         return (Map) value;
     }
@@ -190,5 +196,9 @@ class MapNode implements Node {
             }
         }
         return value;
+    }
+
+    private static Class<?> constructor(Field field) {
+        return field == null ? LinkedList.class : field.getType();
     }
 }

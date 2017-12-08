@@ -1,5 +1,6 @@
 package me.dags.config;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -10,7 +11,27 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * @author dags <dags@dags.me>
  */
-class ParamUtils {
+class ClassUtils {
+
+    static Constructor<?> getConstructor(Field field, Class<?> def) {
+        if (field != null) {
+            Constructor<?> constructor = getConstructor(field.getType());
+            if (constructor != null) {
+                return constructor;
+            }
+        }
+        return getConstructor(def);
+    }
+
+    static <T> Constructor<T> getConstructor(Class<T> type) {
+        try {
+            Constructor<T> constructor = type.getConstructor();
+            constructor.setAccessible(true);
+            return constructor;
+        } catch (NoSuchMethodException e) {
+            return null;
+        }
+    }
 
     static Type[] getParamTypes(Field field) {
         Type type = field.getGenericType();

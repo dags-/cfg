@@ -70,15 +70,10 @@ public interface Mapper<T> {
             }
         }
 
-        if (internal.isObject()) {
+        try (Parser parser = new Parser(reader)) {
             T t = internal.newInstance();
-            try (Parser parser = new Parser(reader)) {
-                parser.unMarshal(t, internal);
-            }
-            return t;
+            return parser.unMarshal(t, internal);
         }
-
-        throw new IllegalStateException("Cannot read node type: " + internal.getClass());
     }
 
     default T read(InputStream inputStream) throws Exception {
@@ -164,6 +159,6 @@ public interface Mapper<T> {
     }
 
     static <T> Mapper<T> of(Class<T> type) {
-        return ClassMapper.getFactory(type);
+        return ClassMapper.getNode(type);
     }
 }

@@ -5,7 +5,9 @@ import me.dags.config.style.Order;
 import me.dags.config.style.Style;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 /**
@@ -18,7 +20,7 @@ class ObjectNode<T> implements Node<T> {
     private final Map<String, Comment> comments;
     private final Map<String, Node> fields;
     private final List<String> order;
-    private final Class<T> type;
+    private final Constructor<T> constructor;
     private final Field field;
     private final Style style;
 
@@ -26,7 +28,7 @@ class ObjectNode<T> implements Node<T> {
         comments = Collections.emptyMap();
         fields = Collections.emptyMap();
         order = Collections.emptyList();
-        type = null;
+        constructor = null;
         field = null;
         style = Style.DEFAULT;
     }
@@ -35,7 +37,7 @@ class ObjectNode<T> implements Node<T> {
         comments = Collections.unmodifiableMap(new HashMap<>(builder.comments));
         fields = Collections.unmodifiableMap(new HashMap<>(builder.fields));
         order = Collections.unmodifiableList(new LinkedList<>(builder.order));
-        type = builder.type;
+        constructor = ClassUtils.getConstructor(builder.type);
         field = builder.field;
         style = builder.style;
     }
@@ -94,8 +96,8 @@ class ObjectNode<T> implements Node<T> {
     }
 
     @Override
-    public T newInstance() throws IllegalAccessException, InstantiationException {
-        return type.newInstance();
+    public T newInstance() throws IllegalAccessException, InstantiationException, InvocationTargetException {
+        return constructor.newInstance();
     }
 
     @Override

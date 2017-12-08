@@ -3,13 +3,14 @@ package me.dags.config;
 import me.dags.config.style.Style;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 
 /**
  * @author dags <dags@dags.me>
  */
 public interface Node<T> extends Mapper<T> {
 
-    T newInstance() throws IllegalAccessException, InstantiationException;
+    T newInstance() throws IllegalAccessException, InstantiationException, InvocationTargetException;
 
     Object get(Object owner) throws IllegalAccessException, InstantiationException;
 
