@@ -58,10 +58,8 @@ class ObjectNode<T> implements Node<T> {
         int childLevel = level + 1;
         Object instance = field != null ? get(owner) : owner;
         Collection<String> keys = order.isEmpty() ? fields.keySet() : order;
-        Iterator<String> iterator = keys.iterator();
 
-        while (iterator.hasNext()) {
-            String next = iterator.next();
+        for (String next : keys) {
             Node value = fields.get(next);
 
             if (value == null || style.ignoreEmpty() && value.isEmpty(instance)) {
@@ -73,6 +71,7 @@ class ObjectNode<T> implements Node<T> {
                     Render.lineEnd(appendable);
                 }
             } else {
+                Render.lineEnd(appendable);
                 Render.lineBreaks(appendable, style);
             }
 
@@ -81,10 +80,6 @@ class ObjectNode<T> implements Node<T> {
             Render.indents(appendable, style, level);
             Render.key(appendable, MapNode.getSafeKey(next), style);
             value.write(appendable, instance, style, childLevel, false);
-
-            if (iterator.hasNext()) {
-                Render.lineEnd(appendable);
-            }
         }
 
         if (!root) {
