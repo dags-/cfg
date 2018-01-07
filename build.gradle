@@ -5,13 +5,12 @@ plugins {
 
 group 'me.dags'
 version '0.5.1-SNAPSHOT'
-println('Test:' + maven_user)
 
 uploadArchives {
     repositories {
         mavenDeployer {
-            repository(url: 'http://127.0.0.1:8081/nexus/content/repositories/snapshots/') {
-                authentication(userName: maven_user, password: maven_pass)
+            repository(url: 'http://51.15.199.142:8081/nexus/content/repositories/snapshots/') {
+                authentication(userName: System.getEnv('m_user'), password: System.getEnv('m_pass'))
             }
         }
     }
