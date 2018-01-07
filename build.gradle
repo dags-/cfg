@@ -8,6 +8,8 @@ version '0.5.1-SNAPSHOT'
 def repo_user = System.getenv('REPO_USER')
 def repo_pass = System.getenv('REPO_PASS')
 
+println('TEST: ' + System.getenv('TEST_STRING'))
+
 uploadArchives {
     repositories {
         mavenDeployer {
