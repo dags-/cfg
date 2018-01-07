@@ -5,6 +5,7 @@ plugins {
 
 group 'me.dags'
 version '0.5.1-SNAPSHOT'
+println('Test:' + maven_user)
 
 uploadArchives {
     repositories {
