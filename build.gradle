@@ -10,7 +10,7 @@ uploadArchives {
     repositories {
         mavenDeployer {
             repository(url: 'http://51.15.199.142:8081/nexus/content/repositories/snapshots/') {
-                authentication(userName: System.getEnv('m_user'), password: System.getEnv('m_pass'))
+                authentication(userName: System.getenv('m_user'), password: System.getenv('m_pass'))
             }
         }
     }
