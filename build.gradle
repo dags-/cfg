@@ -1,6 +1,23 @@
 plugins {
     id 'java'
+    id 'maven'
 }
 
 group 'me.dags'
 version '0.5.1-SNAPSHOT'
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: 'http://127.0.0.1:8081/nexus/content/repositories/snapshots/') {
+                authentication(userName: System.getenv('maven_user'), password: System.getenv('maven_pass'))
+            }
+        }
+    }
+
+    pom {
+        groupId = project.group
+        version = project.version
+        artifactId = project.archivesBaseName
+    }
+}
